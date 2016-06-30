@@ -2,12 +2,15 @@
 
 namespace yii2mod\comments\widgets;
 
-use Yii;
+use yii;
 use yii\base\InvalidConfigException;
 use yii\base\Widget;
+use yii\data\Pagination;
 use yii\helpers\Json;
 use yii2mod\comments\CommentAsset;
+use yii2mod\comments\models\CommentModel;
 use yii2mod\comments\Module;
+use yii2mod\comments\models\CommentQuery;
 
 /**
  * Class Comment
@@ -71,6 +74,16 @@ class Comment extends Widget
      */
     protected $pjaxContainerId;
 
+	/**
+	 * @var boolean show or not deleted comments
+	 */
+	public $showDeleted = false;
+
+	/**
+	 * @var null|integer count comments on one page
+	 */
+	public $perPage = null;
+
     /**
      * Initializes the widget params.
      */
@@ -79,6 +92,10 @@ class Comment extends Widget
         if (empty($this->model)) {
             throw new InvalidConfigException(Yii::t('yii2mod.comments', 'The "model" property must be set.'));
         }
+
+	    if(!is_null($this->perPage)){
+
+	    }
 
         $this->pjaxContainerId = 'comment-pjax-container-' . $this->getId();
         $this->entity = hash('crc32', get_class($this->model));
@@ -105,6 +122,8 @@ class Comment extends Widget
     {
         /* @var $module Module */
         $module = Yii::$app->getModule(Module::$name);
+	    /* @var $commentModelClass CommentModel */
+	    /* @var $commentModel CommentModel */
         $commentModelClass = $module->commentModelClass;
         $commentModel = Yii::createObject([
             'class' => $commentModelClass,
@@ -112,15 +131,39 @@ class Comment extends Widget
             'entityId' => $this->entityId
         ]);
         $commentModel->entityId = $this->entityId;
-        $comments = $commentModelClass::getTree($this->entity, $this->entityId, $this->maxLevel);
+        $commentQuery = $commentModelClass::getQuery(
+	        $this->entity,
+	        $this->entityId,
+	        $this->maxLevel,
+	        $this->showDeleted,
+	        $this->perPage);
+
+	    $pages = null;
+
+	    if(!is_null($this->perPage)) {
+		    $countQuery = clone $commentQuery;
+
+		    $pages = new Pagination(['totalCount' => $countQuery->count(), 'pageSize' => $this->perPage]);
+
+		    $commentQuery
+			    ->offset($pages->offset)
+			    ->limit($pages->limit)
+			    ->all();
+	    }
+
+	    $comments = $commentQuery->all();
+
+	    $commentsTree = $commentModelClass::buildTree($comments);
 
         return $this->render($this->commentView, [
-            'comments' => $comments,
+            'comments' => $commentsTree,
             'commentModel' => $commentModel,
             'maxLevel' => $this->maxLevel,
             'encryptedEntity' => $this->encryptedEntityKey,
             'pjaxContainerId' => $this->pjaxContainerId,
-            'formId' => $this->formId
+            'formId' => $this->formId,
+	        'withDeleted' => $this->showDeleted,
+	        'pages' => $pages
         ]);
     }
 

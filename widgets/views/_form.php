@@ -3,6 +3,7 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
+use yii\imperavi\Widget;
 
 /* @var $this \yii\web\View */
 /* @var $commentModel \yii2mod\comments\models\CommentModel */
@@ -20,7 +21,15 @@ use yii\widgets\ActiveForm;
         'validateOnBlur' => false
     ]); ?>
 
-    <?php echo $form->field($commentModel, 'content', ['template' => '{input}{error}'])->textarea(['placeholder' => Yii::t('yii2mod.comments', 'Add a comment...'), 'rows' => 4, 'data' => ['comment' => 'content']]) ?>
+    <?php echo $form->field($commentModel, 'content', ['template' => '{input}{error}'])->widget(Widget::className(), [
+        'options' => [
+            'minHeight' => 150,
+            'replaceDivs' => true,
+            'paragraphize' => true,
+	        'placeholder' => Yii::t('yii2mod.comments', 'Add a comment...'),
+        ],
+        'id' => 'content',
+    ]);?>
     <?php echo $form->field($commentModel, 'parentId', ['template' => '{input}'])->hiddenInput(['data' => ['comment' => 'parent-id']]); ?>
     <div class="comment-box-partial">
         <div class="button-container show">

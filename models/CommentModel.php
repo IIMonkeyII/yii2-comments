@@ -2,7 +2,7 @@
 
 namespace yii2mod\comments\models;
 
-use Yii;
+use yii;
 use yii\behaviors\BlameableBehavior;
 use yii\behaviors\TimestampBehavior;
 use yii\db\ActiveRecord;
@@ -30,6 +30,12 @@ use yii2mod\comments\Module;
  */
 class CommentModel extends ActiveRecord
 {
+
+	const WITH_DELATED=true;
+	const ONLY_ACTIVE=false;
+
+	static $pagination=null;
+
     /**
      * @var null|array|ActiveRecord[] Comment children
      */
@@ -98,7 +104,8 @@ class CommentModel extends ActiveRecord
                 'attributes' => ['content'],
                 'config' => [
                     'HTML.SafeIframe' => true,
-                    'URI.SafeIframeRegexp' => '%^(https?:)?//(www\.youtube(?:-nocookie)?\.com/embed/|player\.vimeo\.com/video/)%'
+                    'URI.SafeIframeRegexp' => '%^(https?:)?//(www\.youtube(?:-nocookie)?\.com/embed/|player\.vimeo\.com/video/)%',
+                    'AutoFormat.Linkify' => 'true',
                 ]
             ]
         ];
@@ -172,23 +179,25 @@ class CommentModel extends ActiveRecord
      * @param $entity string model class id
      * @param $entityId integer model id
      * @param null $maxLevel
-     * @return array|\yii\db\ActiveRecord[] Comments tree
+     * @return \yii\db\ActiveQuery Comments query
      */
-    public static function getTree($entity, $entityId, $maxLevel = null)
+    public static function getQuery($entity, $entityId, $maxLevel = null, $showDeleted=false, $pages=null)
     {
         $query = self::find()->where([
             'entityId' => $entityId,
             'entity' => $entity,
         ])->with(['author']);
+
         if ($maxLevel > 0) {
             $query->andWhere(['<=', 'level', $maxLevel]);
         }
-        $models = $query->orderBy(['parentId' => SORT_ASC, 'createdAt' => SORT_ASC])->all();
-        if (!empty($models)) {
-            $models = self::buildTree($models);
-        }
 
-        return $models;
+	    if($showDeleted==false){
+		    $query->andWhere(['status'=>CommentStatus::ACTIVE]);
+	    }
+
+	    $query->orderBy(['parentId' => SORT_ASC, 'createdAt' => SORT_DESC]);
+	    return $query;
     }
 
     /**
@@ -198,7 +207,7 @@ class CommentModel extends ActiveRecord
      * @param int $rootID parentId Root ID
      * @return array|ActiveRecord[] Comments tree
      */
-    protected static function buildTree(&$data, $rootID = 0)
+    public static function buildTree(&$data, $rootID = 0)
     {
         $tree = [];
         foreach ($data as $id => $node) {
@@ -329,8 +338,13 @@ class CommentModel extends ActiveRecord
      *
      * @return int|string
      */
-    public function getCommentsCount()
+    public function getCommentsCount($withDelated=null)
     {
-        return self::find()->where(['entity' => $this->entity, 'entityId' => $this->entityId])->count();
+	    $withDelated = is_null($withDelated) ? self::ONLY_ACTIVE : $withDelated;
+        $query = self::find()->where(['entity' => $this->entity, 'entityId' => $this->entityId]);
+	    if($withDelated==self::ONLY_ACTIVE){
+		    $query->where(['status'=>CommentStatus::ACTIVE]);
+	    }
+	    return $query->count();
     }
 }
