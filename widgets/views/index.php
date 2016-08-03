@@ -30,7 +30,7 @@ use yii\widgets\LinkPager;
 		        <?php echo LinkPager::widget([
 		          'pagination' => $pages,
 		        ]);?>
-	        <?endif;?>
+	        <?php endif;?>
         </ol>
 	    <?php if (!Yii::$app->user->isGuest): ?>
 		    <?php echo $this->render('_form', [
