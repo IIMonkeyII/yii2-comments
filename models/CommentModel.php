@@ -343,7 +343,7 @@ class CommentModel extends ActiveRecord
 	    $withDelated = is_null($withDelated) ? self::ONLY_ACTIVE : $withDelated;
         $query = self::find()->where(['entity' => $this->entity, 'entityId' => $this->entityId]);
 	    if($withDelated==self::ONLY_ACTIVE){
-		    $query->where(['status'=>CommentStatus::ACTIVE]);
+		    $query->andWhere(['status'=>CommentStatus::ACTIVE]);
 	    }
 	    return $query->count();
     }
