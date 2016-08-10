@@ -200,6 +200,37 @@ class CommentModel extends ActiveRecord
 	    return $query;
     }
 
+	/**
+	 * Get comments tree.
+	 *
+	 * @param $entity string model class id
+	 * @param $entityId integer model id
+	 * @param null $maxLevel
+	 * @return \yii\db\ActiveQuery Comments query
+	 */
+	public static function getLastComment($entity, $entityId, $maxLevel = 0, $showDeleted=false)
+	{
+		$query = self::find()->where([
+			'entityId' => $entityId,
+			'entity' => $entity,
+			'parentId' => null,
+		]);
+
+		if ($maxLevel > 0) {
+			$query->andWhere(['<=', 'level', $maxLevel]);
+		}
+		else{
+			$query->andWhere([ 'level', 0]);
+		}
+
+		if($showDeleted==false){
+			$query->andWhere(['status'=>CommentStatus::ACTIVE]);
+		}
+
+		$query->orderBy([ 'createdAt' => SORT_DESC]);
+		return $query;
+	}
+
     /**
      * Build comments tree.
      *
